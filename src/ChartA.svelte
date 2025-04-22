@@ -2,8 +2,11 @@
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
 
+	let { lineColor = 'red' } = $props<{ lineColor?: string }>();
+
 	// ссылка на <canvas>
 	let canvas: HTMLCanvasElement;
+	
 
 	onMount(() => {
 		new Chart(canvas, {
@@ -13,6 +16,7 @@
 				datasets: [{
 					label: 'Demo Data',
 					data: [10, 20, 15, 25],
+					borderColor: lineColor,
 					borderWidth: 2
 				}]
 			},

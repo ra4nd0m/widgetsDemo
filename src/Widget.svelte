@@ -7,12 +7,14 @@
         width = 300,
         height = 200,
         title = "Widget",
-        content,
+        Content,
+        contentProps = {},
         onmousedown,
         onremove,
         onresizestart,
         ...rest // сюда попадут event‑handler’ы и любые другие пропсы
     } = $props();
+    
 
     function handleRemoveClick(event: MouseEvent) {
         event.stopPropagation();
@@ -43,7 +45,9 @@
         >
     </header>
     <div class="body">
-        {@render content()}
+        {#if Content}
+            <Content {...contentProps}></Content>
+        {/if}
     </div>
     <div
         class="resize-handle"

@@ -2,6 +2,13 @@
     import Widget from "./Widget.svelte";
     import ChartA from "./ChartA.svelte";
     import { onDestroy } from "svelte";
+    import DataDisplay from "./DataDisplay.svelte";
+    import ComplexChart from "./ComplexChart.svelte";
+
+    type WidgetContentComponent =
+        | typeof ChartA
+        | typeof DataDisplay
+        | typeof ComplexChart;
 
     type WidgetDef = {
         id: number;
@@ -10,7 +17,8 @@
         width: number;
         height: number;
         title: string;
-        content: typeof ChartA;
+        content: WidgetContentComponent;
+        contentProps?: Record<string, any>;
     };
 
     let widgets: WidgetDef[] = $state([
@@ -22,6 +30,7 @@
             height: 200,
             title: "📈 Chart A",
             content: ChartA,
+            contentProps: { lineColor: "blue" }, // Pass lineColor prop here
         },
         {
             id: 2,
@@ -34,10 +43,29 @@
         },
     ]);
 
-    const availableWidgets = {
-        chartA: { title: "📈 Chart A", content: ChartA },
+    type AvailableWidgetInfo = {
+        title: string;
+        content: WidgetContentComponent;
+        defaultProps?: Record<string, any>;
+    };
+
+    const availableWidgets: Record<string, AvailableWidgetInfo> = {
+        chartA: {
+            title: "📈 Chart A",
+            content: ChartA,
+            defaultProps: { lineColor: "blue" },
+        },
         chartB: { title: "📊 Chart B", content: ChartA },
-        chartC: { title: "📉 Chart C", content: ChartA },
+        chartC: {
+            title: "📉 Chart C",
+            content: ChartA,
+            defaultProps: { lineColor: "red" },
+        },
+        complexChart: {
+            title: "📊 Complex Chart",
+            content: ComplexChart,
+        },
+        dataDisplay: { title: "Data Display", content: DataDisplay },
     };
     type AvailableWidgetKey = keyof typeof availableWidgets;
 
@@ -80,36 +108,35 @@
             return isColliding(rectA, rectB);
         });
     }
-    
+
     function findFreePosition(width: number, height: number) {
-    const maxCols = Math.floor(window.innerWidth / gridSize);
-    const maxRows = Math.floor(window.innerHeight / gridSize);
+        const maxCols = Math.floor(window.innerWidth / gridSize);
+        const maxRows = Math.floor(window.innerHeight / gridSize);
 
-    for (let row = 0; row < maxRows; row++) {
-        for (let col = 0; col < maxCols; col++) {
-            const x = col * gridSize;
-            const y = row * gridSize;
+        for (let row = 0; row < maxRows; row++) {
+            for (let col = 0; col < maxCols; col++) {
+                const x = col * gridSize;
+                const y = row * gridSize;
 
-            const rectA = { x, y, width, height };
-            const collision = widgets.some(other => {
-                const rectB = {
-                    x: other.x,
-                    y: other.y,
-                    width: other.width,
-                    height: other.height,
-                };
-                return isColliding(rectA, rectB);
-            });
+                const rectA = { x, y, width, height };
+                const collision = widgets.some((other) => {
+                    const rectB = {
+                        x: other.x,
+                        y: other.y,
+                        width: other.width,
+                        height: other.height,
+                    };
+                    return isColliding(rectA, rectB);
+                });
 
-            if (!collision) {
-                return { x, y };
+                if (!collision) {
+                    return { x, y };
+                }
             }
         }
+        // если не нашлось — возвращаем дефолт
+        return { x: 50, y: 50 };
     }
-    // если не нашлось — возвращаем дефолт
-    return { x: 50, y: 50 };
-}
-
 
     function startDrag(e: MouseEvent, id: number) {
         draggingId = id;
@@ -205,10 +232,10 @@
 
     function addWidget(event: Event) {
         const selectElement = event.target as HTMLSelectElement;
-        const selectedWidget = selectElement.value as AvailableWidgetKey;
+        const selectedWidgetKey = selectElement.value as AvailableWidgetKey;
 
-        if (selectElement && availableWidgets[selectedWidget]) {
-            const widgetToAdd = availableWidgets[selectedWidget];
+        if (selectElement && availableWidgets[selectedWidgetKey]) {
+            const widgetToAdd = availableWidgets[selectedWidgetKey];
             const newWidget: WidgetDef = {
                 id: nextWidgetId,
                 x: 0,
@@ -217,9 +244,13 @@
                 height: 200,
                 title: widgetToAdd.title,
                 content: widgetToAdd.content,
+                contentProps: widgetToAdd.defaultProps || {},
             };
-            const { x, y } = findFreePosition(newWidget.width,newWidget.height);
-            console.log(x,y);
+            const { x, y } = findFreePosition(
+                newWidget.width,
+                newWidget.height,
+            );
+            console.log(x, y);
             newWidget.x = x;
             newWidget.y = y;
             widgets.push(newWidget);
@@ -256,7 +287,8 @@
             width={widget.width}
             height={widget.height}
             title={widget.title}
-            content={widget.content}
+            Content={widget.content}
+            contentProps={widget.contentProps}
             onmousedown={(e: MouseEvent) => startDrag(e, widget.id)}
             onremove={(e: MouseEvent) => removeWidget(widget.id)}
             onresizestart={(e: MouseEvent) => startResize(e, widget.id)}
